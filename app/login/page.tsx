@@ -19,11 +19,13 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (error) {
-        alert("Erro no login: Usuário ou senha incorretos.");
-        } else {
-        // Troque o router.push por este:
-        window.location.href = "/caixa";
-        }
+      alert("Erro no login: Usuário ou senha incorretos.");
+    } else {
+      // Aviso visual para você saber que funcionou
+      alert("✅ Login aprovado! Entrando no sistema...");
+      // Agora sim mudamos de página
+      window.location.href = "/caixa";
+    }
   }
 
   return (

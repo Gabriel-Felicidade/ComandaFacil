@@ -1,7 +1,7 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// O createBrowserClient garante que o login seja salvo nos Cookies para o Middleware ler
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+// Voltando para o createClient padrão que usa o localStorage (infalível para telas de cliente)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
