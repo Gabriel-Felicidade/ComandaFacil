@@ -8,7 +8,6 @@ import { Store, ChefHat, LayoutDashboard, LogOut } from "lucide-react";
 export default function Navbar() {
   const pathname = usePathname();
 
-  // Esconde o menu se a pessoa estiver na tela de login ou na página inicial de redirecionamento
   if (pathname === "/login" || pathname === "/") return null;
 
   async function handleLogout() {
@@ -17,22 +16,22 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-blue-800 text-white shadow-md">
+    <nav className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           
-          {/* Logo / Nome */}
-          <div className="flex-shrink-0 flex items-center gap-2 font-bold text-xl">
-            <Store className="text-yellow-400" />
-            <span>Cantina PIB</span>
+          {/* Logo */}
+          <div className="flex-shrink-0 flex items-center gap-2 font-black text-xl tracking-tight text-blue-600">
+            <Store className="text-blue-500" strokeWidth={2.5} />
+            <span className="hidden sm:block">CantinaApp</span>
           </div>
 
           {/* Links de Navegação */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Link 
               href="/caixa" 
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === '/caixa' ? 'bg-blue-900 text-yellow-400' : 'hover:bg-blue-700'
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                pathname === '/caixa' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
               }`}
             >
               <Store size={18} /> <span className="hidden md:inline">Caixa</span>
@@ -40,8 +39,8 @@ export default function Navbar() {
             
             <Link 
               href="/cozinha" 
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === '/cozinha' ? 'bg-blue-900 text-yellow-400' : 'hover:bg-blue-700'
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                pathname === '/cozinha' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
               }`}
             >
               <ChefHat size={18} /> <span className="hidden md:inline">Cozinha</span>
@@ -49,20 +48,19 @@ export default function Navbar() {
             
             <Link 
               href="/admin" 
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === '/admin' ? 'bg-blue-900 text-yellow-400' : 'hover:bg-blue-700'
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                pathname === '/admin' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
               }`}
             >
               <LayoutDashboard size={18} /> <span className="hidden md:inline">Admin</span>
             </Link>
 
-            {/* Divisor vertical */}
-            <div className="h-6 w-px bg-blue-700 mx-2 hidden md:block"></div>
+            <div className="h-6 w-px bg-gray-200 mx-1 sm:mx-2"></div>
 
-            {/* Botão de Sair */}
+            {/* Botão de Sair Minimalista */}
             <button 
               onClick={handleLogout} 
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-red-500 hover:bg-red-600 transition-colors"
+              className="p-2 sm:px-4 sm:py-2 rounded-full text-sm font-semibold text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors flex items-center gap-2"
             >
               <LogOut size={18} /> <span className="hidden md:inline">Sair</span>
             </button>
