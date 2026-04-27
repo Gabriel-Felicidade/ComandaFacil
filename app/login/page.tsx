@@ -32,7 +32,7 @@ export default function LoginPage() {
     <div className="flex h-screen items-center justify-center bg-gray-50">
       <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black text-blue-600 mb-2">Cantina App</h1>
+          <h1 className="text-3xl font-black text-blue-600 mb-2">PIB Cantina</h1>
           <p className="text-gray-500">Faça login para acessar o sistema</p>
         </div>
 
