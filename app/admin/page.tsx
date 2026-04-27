@@ -11,9 +11,18 @@ export default function AdminPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
 
+// Busca os dados e verifica o login assim que a tela de Admin abre
   useEffect(() => {
+    // A Catraca do Admin
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        window.location.href = "/login";
+      }
+    });
+
+    // O que já tinha antes
     fetchItems();
-    fetchOrders(); // Busca as vendas quando a tela abre
+    fetchOrders();
   }, []);
 
   // --- FUNÇÕES DE PRODUTOS ---
