@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { ShoppingBag, Check, Trash2, User, CreditCard } from "lucide-react";
+import { ShoppingBag, Check, Trash2, User, CreditCard, Plus } from "lucide-react";
 
 export default function CaixaPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -74,29 +74,43 @@ export default function CaixaPage() {
         
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
           {items.map((item) => (
-            <button
+            <div
               key={item.id}
-              onClick={() => addToCart(item)}
-              disabled={item.stock_quantity <= 0}
-              className={`group relative flex flex-col items-start p-5 rounded-3xl border-2 transition-all duration-200 active:scale-95 ${
+              className={`group relative flex flex-col items-start p-5 rounded-3xl border-2 transition-all duration-200 ${
                 item.stock_quantity > 0
-                  ? "bg-white border-transparent shadow-sm hover:border-blue-500 hover:shadow-xl hover:shadow-blue-100"
-                  : "bg-slate-100 border-transparent opacity-60 cursor-not-allowed"
+                  ? "bg-white border-transparent shadow-sm hover:border-blue-200 hover:shadow-xl hover:shadow-blue-50"
+                  : "bg-slate-100 border-transparent opacity-70"
               }`}
             >
-              <span className="text-lg font-bold text-slate-800 leading-tight mb-2 group-hover:text-blue-600 transition-colors">
+              <span className="text-lg font-bold text-slate-800 leading-tight mb-2">
                 {item.name}
               </span>
               <span className="text-2xl font-black text-slate-900">
                 R$ {item.price.toFixed(2)}
               </span>
               
-              <div className={`mt-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+              <div className={`mt-3 mb-5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                 item.stock_quantity > 5 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
               }`}>
                 Estoque: {item.stock_quantity}
               </div>
-            </button>
+
+              {/* Novo Botão de Adicionar */}
+              <button
+                onClick={() => addToCart(item)}
+                disabled={item.stock_quantity <= 0}
+                className="mt-auto w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold transition-all disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white"
+              >
+                {item.stock_quantity > 0 ? (
+                  <>
+                    <Plus size={18} strokeWidth={3} />
+                    Adicionar
+                  </>
+                ) : (
+                  "Esgotado"
+                )}
+              </button>
+            </div>
           ))}
         </div>
       </div>
