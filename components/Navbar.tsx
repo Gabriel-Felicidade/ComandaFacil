@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image"; // Adicione essa linha aqui
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { Store, ChefHat, LayoutDashboard, LogOut } from "lucide-react";
+
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -22,8 +24,15 @@ export default function Navbar() {
           
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center gap-2 font-black text-xl tracking-tight text-blue-600">
-            <Store className="text-blue-500" strokeWidth={2.5} />
-            <span className="hidden sm:block">CantinaApp</span>
+            {/* <Store className="text-blue-500" strokeWidth={2.5} /> */}
+            <Image 
+                src="/logo.png" // O nome exato do arquivo que você colocou na pasta public
+                alt="Logo Cantina"
+                width={40}  // Largura em pixels
+                height={40} // Altura em pixels
+                className="rounded-lg object-contain" // Deixa os cantos arredondados se quiser
+            />
+            <span className="hidden sm:block">CantPIB</span>
           </div>
 
           {/* Links de Navegação */}
