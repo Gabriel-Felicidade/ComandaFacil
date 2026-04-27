@@ -19,11 +19,11 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (error) {
-      alert("Erro no login: Usuário ou senha incorretos.");
-    } else {
-      // Deu certo! O middleware agora assume e manda pro Caixa ou Admin
-      router.push("/caixa");
-    }
+        alert("Erro no login: Usuário ou senha incorretos.");
+        } else {
+        // Troque o router.push por este:
+        window.location.href = "/caixa";
+        }
   }
 
   return (
