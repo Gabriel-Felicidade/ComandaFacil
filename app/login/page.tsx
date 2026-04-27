@@ -43,7 +43,7 @@ export default function LoginPage() {
               required
               type="email" 
               placeholder="seu@email.com" 
-              className="w-full border-2 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+              className="w-full border-2 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition-colors text-black"
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
@@ -53,7 +53,7 @@ export default function LoginPage() {
               required
               type="password" 
               placeholder="••••••••" 
-              className="w-full border-2 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+              className="w-full border-2 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition-colors text-black"
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
