@@ -57,10 +57,34 @@ export default function AdminPage() {
     }
   }
 
+  // NOVA LÓGICA DE EXCLUSÃO DE ITEM
   async function handleDeleteItem(id: string) {
     if (confirm("Tem certeza que deseja excluir este item?")) {
-      await supabase.from("items").delete().eq("id", id);
-      fetchItems();
+      const { error } = await supabase.from("items").delete().eq("id", id);
+      
+      if (error) {
+        alert("⚠️ Bloqueio de Segurança: Este item não pode ser excluído porque já existe uma venda registrada com ele. Para removê-lo da tela do Caixa, apenas atualize o Estoque dele para 0 (zero).");
+      } else {
+        fetchItems();
+      }
+    }
+  }
+
+  // NOVA LÓGICA DE EXCLUSÃO DE LOG DE VENDA
+  async function handleDeleteOrder(id: string) {
+    if (confirm("🚨 ATENÇÃO: Tem certeza que deseja cancelar e apagar esta venda? O registro será deletado permanentemente.")) {
+      // 1. Primeiro apagamos as referências na tabela de ligação (order_items)
+      await supabase.from("order_items").delete().eq("order_id", id);
+      
+      // 2. Depois apagamos a venda principal
+      const { error } = await supabase.from("orders").delete().eq("id", id);
+
+      if (error) {
+        alert("Erro ao excluir a venda: " + error.message);
+      } else {
+        alert("Venda apagada com sucesso!");
+        fetchOrders(); // Recarrega a tabela e recalcula o total
+      }
     }
   }
 
@@ -181,12 +205,12 @@ export default function AdminPage() {
                     <p className="font-bold text-slate-800">{item.name}</p>
                     <div className="flex gap-3 text-sm mt-1">
                       <span className="text-slate-500 font-medium">R$ {item.price.toFixed(2)}</span>
-                      <span className={`font-bold ${item.stock_quantity > 5 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      <span className={`font-bold ${item.stock_quantity > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                         Qtd: {item.stock_quantity}
                       </span>
                     </div>
                   </div>
-                  <button onClick={() => handleDeleteItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100">
+                  <button onClick={() => handleDeleteItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Apagar item">
                     <Trash2 size={18} />
                   </button>
                 </div>
@@ -225,6 +249,7 @@ export default function AdminPage() {
                       <th className="pb-4 font-bold px-4">Itens</th>
                       <th className="pb-4 font-bold px-4">Pagamento</th>
                       <th className="pb-4 font-bold text-right px-4">Total</th>
+                      <th className="pb-4 font-bold text-center px-4">Ação</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-700">
@@ -242,6 +267,15 @@ export default function AdminPage() {
                         </td>
                         <td className="py-4 px-4 font-bold text-right text-slate-900">
                           R$ {Number(order.total_amount).toFixed(2)}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <button 
+                            onClick={() => handleDeleteOrder(order.id)}
+                            className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100 mx-auto block"
+                            title="Apagar Log de Venda"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </td>
                       </tr>
                     ))}
