@@ -7,6 +7,8 @@ import { CheckCircle, Clock } from "lucide-react";
 export default function CozinhaPage() {
   const [orders, setOrders] = useState<any[]>([]);
 
+  
+
   useEffect(() => {
     fetchPendingOrders();
 

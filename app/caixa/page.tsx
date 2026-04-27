@@ -11,8 +11,15 @@ export default function CaixaPage() {
   const [paymentMethod, setPaymentMethod] = useState("dinheiro");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Busca os produtos assim que a tela abre
+// Busca os produtos e verifica o login assim que a tela abre
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      // Se não tiver sessão ativa, chuta de volta pro login
+      if (!data.session) {
+        window.location.href = "/login";
+      }
+    });
+
     fetchItems();
   }, []);
 
