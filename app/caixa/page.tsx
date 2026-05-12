@@ -41,8 +41,16 @@ export default function CaixaPage() {
     });
   }
 
+  function removeFromCart(id: string) {
+    setCart((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  // CÁLCULO DINÂMICO: Soma o valor de todos os itens multiplicado pela quantidade
+  const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
   /**
    * FINALIZAÇÃO DE PEDIDO (RPC)
+
    * Decisão Técnica: Usamos uma função no PostgreSQL (RPC) para garantir ATOMICIDADE.
    * Isso evita que o estoque seja baixado sem que o pedido seja registrado.
    */
