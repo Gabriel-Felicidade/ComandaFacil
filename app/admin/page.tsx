@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { Plus, Trash2, Download, Package, DollarSign, Receipt, LayoutDashboard } from "lucide-react";
 
 export default function AdminPage() {
+  // ESTADOS DA APLICAÇÃO: Reatividade para interface e armazenamento de dados
   const [items, setItems] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [name, setName] = useState("");
@@ -12,7 +13,9 @@ export default function AdminPage() {
   const [stock, setStock] = useState("");
   const [totalArrecadado, setTotalArrecadado] = useState(0);
 
+  // CICLO DE VIDA: Executa ao montar o componente
   useEffect(() => {
+    // PROTEÇÃO CLIENT-SIDE: Garante que a sessão existe
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) window.location.href = "/login";
     });
@@ -20,11 +23,18 @@ export default function AdminPage() {
     fetchOrders();
   }, []);
 
+  /**
+   * OPERAÇÃO (READ): Busca todos os itens do cardápio
+   */
   async function fetchItems() {
     const { data } = await supabase.from("items").select("*").order("name");
     if (data) setItems(data);
   }
 
+  /**
+   * OPERAÇÃO (READ): Busca as vendas do dia corrente
+   * Inclui relacionamento (Join) com itens do pedido
+   */
   async function fetchOrders() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -42,6 +52,9 @@ export default function AdminPage() {
     }
   }
 
+  /**
+   * OPERAÇÃO (CREATE): Insere um novo produto no banco de dados
+   */
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !price || !stock) return alert("Preencha todos os campos");
@@ -57,36 +70,40 @@ export default function AdminPage() {
     }
   }
 
-  // NOVA LÓGICA DE EXCLUSÃO DE ITEM
+  /**
+   * OPERAÇÃO (DELETE): Remove um item do estoque
+   * Nota: Possui restrição de integridade referencial no banco
+   */
   async function handleDeleteItem(id: string) {
     if (confirm("Tem certeza que deseja excluir este item?")) {
       const { error } = await supabase.from("items").delete().eq("id", id);
       
       if (error) {
-        alert("⚠️ Bloqueio de Segurança: Este item não pode ser excluído porque já existe uma venda registrada com ele. Para removê-lo da tela do Caixa, apenas atualize o Estoque dele para 0 (zero).");
+        alert("⚠️ Bloqueio de Segurança: Este item não pode ser excluído porque já existe uma venda registrada com ele.");
       } else {
         fetchItems();
       }
     }
   }
 
-  // NOVA LÓGICA DE EXCLUSÃO DE LOG DE VENDA
+  /**
+   * OPERAÇÃO (DELETE): Exclui um log de venda e seus itens relacionados
+   */
   async function handleDeleteOrder(id: string) {
-    if (confirm("🚨 ATENÇÃO: Tem certeza que deseja cancelar e apagar esta venda? O registro será deletado permanentemente.")) {
-      // 1. Primeiro apagamos as referências na tabela de ligação (order_items)
+    if (confirm("🚨 ATENÇÃO: Tem certeza que deseja cancelar e apagar esta venda?")) {
+      // Deleta em cascata (primeiro os itens, depois a ordem)
       await supabase.from("order_items").delete().eq("order_id", id);
-      
-      // 2. Depois apagamos a venda principal
       const { error } = await supabase.from("orders").delete().eq("id", id);
 
       if (error) {
         alert("Erro ao excluir a venda: " + error.message);
       } else {
         alert("Venda apagada com sucesso!");
-        fetchOrders(); // Recarrega a tabela e recalcula o total
+        fetchOrders();
       }
     }
   }
+
 
   function exportToCSV() {
     if (orders.length === 0) return alert("Não há vendas para exportar.");
@@ -127,8 +144,8 @@ export default function AdminPage() {
             <LayoutDashboard size={24} />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Painel Admin</h1>
-            <p className="text-slate-500 font-medium">Gerencie o estoque e acompanhe as vendas</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">O que vai ser o cardápio do dia?</h1>
+            <p className="text-slate-500 font-medium">Gerencie o estoque e acompanhe as vendas de hoje</p>
           </div>
         </div>
 

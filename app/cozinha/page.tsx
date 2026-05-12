@@ -8,28 +8,51 @@ export default function CozinhaPage() {
   const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
+    // PROTEÇÃO: Garante autenticação
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) window.location.href = "/login";
     });
 
     fetchPendingOrders();
+
+    /**
+     * SUPABASE REALTIME (Subscrição)
+     * Decisão Técnica: Usamos o canal 'novos_pedidos' para ouvir inserções 
+     * na tabela 'orders' em tempo real. Isso evita que o cozinheiro 
+     * precise atualizar a página para ver novos pedidos.
+     */
     const subscription = supabase
       .channel('novos_pedidos')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => { fetchPendingOrders(); })
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'orders' }, 
+        payload => { fetchPendingOrders(); }
+      )
       .subscribe();
 
+    // LIMPEZA (Cleanup): Evita vazamento de memória e múltiplas conexões abertas
     return () => { supabase.removeChannel(subscription); };
   }, []);
 
+  /**
+   * OPERAÇÃO (READ): Busca pedidos com status 'pendente'
+   */
   async function fetchPendingOrders() {
-    const { data } = await supabase.from("orders").select(`*, order_items ( quantity, items ( name ) )`).eq("status", "pendente").order("created_at", { ascending: true });
+    const { data } = await supabase
+      .from("orders")
+      .select(`*, order_items ( quantity, items ( name ) )`)
+      .eq("status", "pendente")
+      .order("created_at", { ascending: true });
     if (data) setOrders(data);
   }
 
+  /**
+   * OPERAÇÃO (UPDATE): Altera o status do pedido para 'pronto'
+   */
   async function markAsReady(orderId: string) {
     const { error } = await supabase.from("orders").update({ status: "pronto" }).eq("id", orderId);
     if (!error) setOrders((prev) => prev.filter((o) => o.id !== orderId));
   }
+
 
   function getMinutesAgo(dateString: string) {
     const diff = new Date().getTime() - new Date(dateString).getTime();

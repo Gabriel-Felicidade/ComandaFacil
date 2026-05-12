@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { ShoppingBag, Check, Trash2, User, CreditCard, Plus } from "lucide-react";
 
 export default function CaixaPage() {
+  // ESTADOS LOCAIS: Controle do carrinho e interface
   const [items, setItems] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
   const [customerName, setCustomerName] = useState("");
@@ -12,17 +13,24 @@ export default function CaixaPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // Verificação de sessão client-side
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) window.location.href = "/login";
     });
     fetchItems();
   }, []);
 
+  /**
+   * OPERAÇÃO (READ): Busca itens disponíveis para venda
+   */
   async function fetchItems() {
     const { data } = await supabase.from("items").select("*").order("name");
     if (data) setItems(data);
   }
 
+  /**
+   * LÓGICA DO CARRINHO: Gerenciamento de estado complexo em memória
+   */
   function addToCart(item: any) {
     setCart((prev) => {
       const existing = prev.find((i) => i.id === item.id);
@@ -33,23 +41,23 @@ export default function CaixaPage() {
     });
   }
 
-  function removeFromCart(id: string) {
-    setCart((prev) => prev.filter((i) => i.id !== id));
-  }
-
-  const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-
+  /**
+   * FINALIZAÇÃO DE PEDIDO (RPC)
+   * Decisão Técnica: Usamos uma função no PostgreSQL (RPC) para garantir ATOMICIDADE.
+   * Isso evita que o estoque seja baixado sem que o pedido seja registrado.
+   */
   async function handleCheckout() {
     if (cart.length === 0) return alert("Carrinho vazio!");
     setIsLoading(true);
 
     const cartItemsDb = cart.map((item) => ({ item_id: item.id, quantity: item.quantity, price: item.price }));
 
+    // Chamada da procedure armazenada no Supabase
     const { data, error } = await supabase.rpc("process_order", {
       p_items: cartItemsDb, 
       p_customer_name: customerName || "Anônimo", 
       p_payment_method: paymentMethod, 
-      p_total_amount: total,
+      p_total_amount: cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
     });
 
     setIsLoading(false);
@@ -61,6 +69,7 @@ export default function CaixaPage() {
       setCart([]); setCustomerName(""); fetchItems();
     }
   }
+
 
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] bg-[#F8FAFC]">

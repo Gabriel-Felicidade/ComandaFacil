@@ -5,15 +5,22 @@ import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  // GESTÃO DE ESTADO: Controle dos campos de entrada (Controlled Components)
+  const [email, setEmail] = useState("comanda@facil.com");
+  const [password, setPassword] = useState("comanda1234");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  /**
+   * LÓGICA DE AUTENTICAÇÃO
+   * @param e Evento de submissão do formulário
+   */
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
 
+    // OPERAÇÃO DE AUTH (READ): Verifica as credenciais no Supabase Auth
+    // O Supabase gerencia o JWT e a sessão automaticamente
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     setIsLoading(false);
@@ -21,18 +28,21 @@ export default function LoginPage() {
     if (error) {
       alert("Erro no login: Usuário ou senha incorretos.");
     } else {
-      // Aviso visual para você saber que funcionou
+      // Feedback visual ao usuário antes do redirecionamento
       alert("✅ Login aprovado! Entrando no sistema...");
-      // Agora sim mudamos de página
-      window.location.href = "/caixa";
+      
+      // REDIRECIONAMENTO: Forçamos o recarregamento para que o Middleware 
+      // capture os novos cookies de sessão gerados pelo signInWithPassword.
+      window.location.href = "/admin";
     }
   }
+
 
   return (
     <div className="flex h-screen items-center justify-center bg-gray-50">
       <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black text-blue-600 mb-2">PIB Cantina</h1>
+          <h1 className="text-3xl font-black text-blue-600 mb-2">ComandaFácil</h1>
           <p className="text-gray-500">Faça login para acessar o sistema</p>
         </div>
 
@@ -43,6 +53,7 @@ export default function LoginPage() {
               required
               type="email" 
               placeholder="seu@email.com" 
+              value={email}
               className="w-full border-2 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition-colors text-black"
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -53,6 +64,7 @@ export default function LoginPage() {
               required
               type="password" 
               placeholder="••••••••" 
+              value={password}
               className="w-full border-2 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition-colors text-black"
               onChange={(e) => setPassword(e.target.value)}
             />

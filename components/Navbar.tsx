@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image"; // Adicione essa linha aqui
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
@@ -24,16 +24,7 @@ export default function Navbar() {
           
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center gap-2 font-black text-xl tracking-tight text-blue-600">
-            {/* <Store className="text-blue-500" strokeWidth={2.5} /> */}
-            <Image 
-                src="/Logotipo_blue.png" // O nome exato do arquivo que você colocou na pasta public
-                alt="Logo Cantina"
-                width={40}  // Largura em pixels
-                height={40} // Altura em pixels
-                className="rounded-lg object-contain" // Deixa os cantos arredondados se quiser
-            />
-
-            <span className="hidden sm:block">PIB Cantina</span>
+            <span className="block">ComandaFácil</span>
           </div>
 
           {/* Links de Navegação */}

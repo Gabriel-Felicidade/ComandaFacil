@@ -6,33 +6,20 @@ import Navbar from "../components/Navbar";
 const inter = Inter({ subsets: ["latin"] });
 
 // Defina a URL base para facilitar a manutenção
-const siteUrl = "https://cantina-igreja.vercel.app";
+const siteUrl = "https://comandafacil.vercel.app";
 
 export const metadata: Metadata = {
-  title: "Cantina PIB | Sistema",
-  description: "Gerenciamento de pedidos e estoque da Cantina",
+  title: "ComandaFácil | Sistema",
+  description: "Gerenciamento inteligente de pedidos e comandas",
   
-  icons: {
-    icon: "/Logotipo_blue.png",
-    apple: "/Logotipo_blue.png",
-    // Se quiser que o ícone fique perfeito em Android/Chrome, adicione o shortcut:
-    shortcut: "/Logotipo_blue.png",
-  },
+
 
   openGraph: {
-    title: "Cantina PIB",
-    description: "Faça seu pedido e acompanhe a cozinha em tempo real.",
+    title: "ComandaFácil",
+    description: "Faça seu pedido e acompanhe sua comanda em tempo real.",
     url: siteUrl,
-    siteName: "Cantina App",
-    images: [
-      {
-        // Usar a URL completa aqui garante que o WhatsApp sempre encontre o logo
-        url: `${siteUrl}/Logotipo_blue.png`, 
-        width: 1200,
-        height: 630,
-        alt: "Logo Cantina PIB",
-      },
-    ],
+    siteName: "ComandaFácil App",
+
     locale: "pt_BR",
     type: "website",
   },
