@@ -5,9 +5,9 @@ import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  // GESTÃO DE ESTADO: Controle dos campos de entrada (Controlled Components)
-  const [email, setEmail] = useState("comanda@facil.com");
-  const [password, setPassword] = useState("comanda1234");
+  // GESTÃO DE ESTADO: Controle dos campos de entrada (Campos iniciam vazios por segurança)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
