@@ -35,7 +35,17 @@ export default function CaixaPage() {
     setCart((prev) => {
       const existing = prev.find((i) => i.id === item.id);
       if (existing) {
+        // Bloqueio de estoque no carrinho (Frontend)
+        if (existing.quantity >= item.stock_quantity) {
+          alert(`⚠️ Estoque Insuficiente! Só temos ${item.stock_quantity}x unidades de "${item.name}" em estoque.`);
+          return prev;
+        }
         return prev.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      // Bloqueio caso o estoque seja 0
+      if (item.stock_quantity <= 0) {
+        alert(`⚠️ "${item.name}" está esgotado!`);
+        return prev;
       }
       return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
     });
@@ -71,8 +81,10 @@ export default function CaixaPage() {
     setIsLoading(false);
 
     if (error) {
+      console.error("❌ ERRO NO CHECKOUT (RPC):", error);
       alert("Erro: " + error.message);
     } else {
+      console.log("✅ SUCESSO NO CHECKOUT (RPC):", data);
       alert(`✅ Sucesso! Ticket: #${data.order_number}`);
       setCart([]); setCustomerName(""); fetchItems();
     }
