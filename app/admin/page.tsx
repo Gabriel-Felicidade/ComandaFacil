@@ -2,16 +2,32 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { Plus, Trash2, Download, Package, DollarSign, Receipt, LayoutDashboard } from "lucide-react";
+import { Plus, Trash2, Download, Package, DollarSign, Receipt, LayoutDashboard, Edit2, X, Check } from "lucide-react";
 
 export default function AdminPage() {
   // ESTADOS DA APLICAÇÃO: Reatividade para interface e armazenamento de dados
   const [items, setItems] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
-  const [name, setName] = useState("");
+  const [selectedOption, setSelectedOption] = useState("");
+  const [customName, setCustomName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [totalArrecadado, setTotalArrecadado] = useState(0);
+
+  const PREDEFINED_ITEMS = [
+    "coxinha",
+    "kibe",
+    "risole",
+    "pastel de carne",
+    "pastel de queijo",
+    "Refrigerante Cola",
+    "Refrigerante Guaraná",
+    "Suco de Laranja",
+    "Suco de Uva",
+    "Água Mineral",
+    "Bolo de Pote"
+  ];
 
   // CICLO DE VIDA: Executa ao montar o componente
   useEffect(() => {
@@ -53,20 +69,58 @@ export default function AdminPage() {
   }
 
   /**
+   * EDICÃO: Prepara a interface para edicão do produto
+   */
+  function startEditItem(item: any) {
+    setEditingId(item.id);
+    setPrice(String(item.price));
+    setStock(String(item.stock_quantity));
+    
+    if (PREDEFINED_ITEMS.includes(item.name)) {
+      setSelectedOption(item.name);
+      setCustomName("");
+    } else {
+      setSelectedOption("Outro");
+      setCustomName(item.name);
+    }
+  }
+
+  /**
+   * OPERAÇÃO (UPDATE): Atualiza um produto existente no banco de dados
+   */
+  async function handleUpdateItem(e: React.FormEvent) {
+    e.preventDefault();
+    const finalName = selectedOption === "Outro" ? customName.trim() : selectedOption;
+    if (!finalName || !price || !stock || !editingId) return alert("Preencha todos os campos");
+
+    const { error } = await supabase
+      .from("items")
+      .update({ name: finalName, price: parseFloat(price), stock_quantity: parseInt(stock) })
+      .eq("id", editingId);
+
+    if (error) {
+      alert("Erro ao editar: " + error.message);
+    } else {
+      setEditingId(null); setSelectedOption(""); setCustomName(""); setPrice(""); setStock(""); fetchItems();
+    }
+  }
+
+  /**
    * OPERAÇÃO (CREATE): Insere um novo produto no banco de dados
    */
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
-    if (!name || !price || !stock) return alert("Preencha todos os campos");
+    const finalName = selectedOption === "Outro" ? customName.trim() : selectedOption;
+    if (!finalName || !price || !stock) return alert("Preencha todos os campos");
 
     const { error } = await supabase.from("items").insert([
-      { name, price: parseFloat(price), stock_quantity: parseInt(stock) },
+      { name: finalName, price: parseFloat(price), stock_quantity: parseInt(stock) },
     ]);
 
     if (error) {
       alert("Erro ao adicionar: " + error.message);
     } else {
-      setName(""); setPrice(""); setStock(""); fetchItems();
+      setSelectedOption(""); setCustomName(""); setPrice(""); setStock(""); fetchItems();
     }
   }
 
@@ -180,16 +234,49 @@ export default function AdminPage() {
           {/* Cadastro de Produto */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h2 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-2">
-              <Package size={20} className="text-blue-500"/> Cadastrar Produto
+              <Package size={20} className="text-blue-500"/> {editingId ? "Editar Produto" : "Cadastrar Produto"}
             </h2>
-            <form onSubmit={handleAddItem} className="space-y-4">
+            <form onSubmit={editingId ? handleUpdateItem : handleAddItem} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Nome do Item</label>
-                <input 
-                  type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Refrigerante Lata" 
-                  className="w-full border-2 border-slate-200 p-3 rounded-xl focus:border-blue-500 focus:outline-none text-slate-900 placeholder:text-slate-400"
-                />
+                <select
+                  value={selectedOption}
+                  onChange={(e) => {
+                    setSelectedOption(e.target.value);
+                    if (e.target.value !== "Outro") {
+                      setCustomName("");
+                    }
+                  }}
+                  className="w-full border-2 border-slate-200 p-3 rounded-xl focus:border-blue-500 focus:outline-none text-slate-900 bg-white font-medium"
+                >
+                  <option value="">Selecione um produto...</option>
+                  <option value="coxinha">Coxinha</option>
+                  <option value="kibe">Kibe</option>
+                  <option value="risole">Risole</option>
+                  <option value="pastel de carne">Pastel de Carne</option>
+                  <option value="pastel de queijo">Pastel de Queijo</option>
+                  <option value="Refrigerante Cola">Refrigerante Cola</option>
+                  <option value="Refrigerante Guaraná">Refrigerante Guaraná</option>
+                  <option value="Suco de Laranja">Suco de Laranja</option>
+                  <option value="Suco de Uva">Suco de Uva</option>
+                  <option value="Água Mineral">Água Mineral</option>
+                  <option value="Bolo de Pote">Bolo de Pote</option>
+                  <option value="Outro">Outro (Digitar nome...)</option>
+                </select>
               </div>
+
+              {selectedOption === "Outro" && (
+                <div className="mt-3">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Nome Personalizado</label>
+                  <input
+                    type="text"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    placeholder="Ex: Pastel de Palmito"
+                    className="w-full border-2 border-slate-200 p-3 rounded-xl focus:border-blue-500 focus:outline-none text-slate-900 placeholder:text-slate-400"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">Preço (R$)</label>
@@ -206,9 +293,22 @@ export default function AdminPage() {
                   />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-slate-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors">
-                <Plus size={20} /> Salvar Produto
-              </button>
+              <div className="flex gap-2">
+                {editingId && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setEditingId(null); setSelectedOption(""); setCustomName(""); setPrice(""); setStock("");
+                    }} 
+                    className="flex-1 bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-300 transition-colors"
+                  >
+                    <X size={20} /> Cancelar
+                  </button>
+                )}
+                <button type="submit" className="flex-[2] bg-slate-800 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors">
+                  {editingId ? <Check size={20} /> : <Plus size={20} />} {editingId ? "Salvar Alterações" : "Salvar Produto"}
+                </button>
+              </div>
             </form>
           </div>
 
@@ -227,9 +327,14 @@ export default function AdminPage() {
                       </span>
                     </div>
                   </div>
-                  <button onClick={() => handleDeleteItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Apagar item">
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEditItem(item)} className="text-slate-400 hover:text-blue-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Editar item">
+                      <Edit2 size={18} />
+                    </button>
+                    <button onClick={() => handleDeleteItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Apagar item">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
