@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [filterPeriod, setFilterPeriod] = useState("hoje");
   const [totalArrecadado, setTotalArrecadado] = useState(0);
 
   const PREDEFINED_ITEMS = [
@@ -36,8 +37,12 @@ export default function AdminPage() {
       if (!data.session) window.location.href = "/login";
     });
     fetchItems();
-    fetchOrders();
   }, []);
+
+  // Re-busca pedidos sempre que o período selecionado mudar
+  useEffect(() => {
+    fetchOrders();
+  }, [filterPeriod]);
 
   /**
    * OPERAÇÃO (READ): Busca todos os itens do cardápio
@@ -48,18 +53,35 @@ export default function AdminPage() {
   }
 
   /**
-   * OPERAÇÃO (READ): Busca as vendas do dia corrente
+   * OPERAÇÃO (READ): Busca as vendas filtradas pelo período de tempo selecionado
    * Inclui relacionamento (Join) com itens do pedido
    */
   async function fetchOrders() {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    const dateLimit = new Date();
+    
+    if (filterPeriod === "hoje") {
+      dateLimit.setHours(0, 0, 0, 0);
+    } else if (filterPeriod === "7dias") {
+      dateLimit.setDate(dateLimit.getDate() - 7);
+      dateLimit.setHours(0, 0, 0, 0);
+    } else if (filterPeriod === "15dias") {
+      dateLimit.setDate(dateLimit.getDate() - 15);
+      dateLimit.setHours(0, 0, 0, 0);
+    } else if (filterPeriod === "30dias") {
+      dateLimit.setDate(dateLimit.getDate() - 30);
+      dateLimit.setHours(0, 0, 0, 0);
+    }
 
-    const { data } = await supabase
+    let query = supabase
       .from("orders")
       .select(`*, order_items ( quantity, items ( name ) )`)
-      .gte("created_at", hoje.toISOString())
       .order("created_at", { ascending: false });
+
+    if (filterPeriod !== "tudo") {
+      query = query.gte("created_at", dateLimit.toISOString());
+    }
+
+    const { data } = await query;
 
     if (data) {
       setOrders(data);
@@ -93,9 +115,20 @@ export default function AdminPage() {
     const finalName = selectedOption === "Outro" ? customName.trim() : selectedOption;
     if (!finalName || !price || !stock || !editingId) return alert("Preencha todos os campos");
 
+    const stockQty = parseInt(stock);
+    if (stockQty < 0) {
+      const confirmDelete = confirm(`⚠️ O estoque de "${finalName}" não pode ser menor que zero. Se você deseja retirar este item do cardápio, prefere excluí-lo permanentemente agora?`);
+      if (confirmDelete) {
+        const idToDelete = editingId;
+        setEditingId(null); setSelectedOption(""); setCustomName(""); setPrice(""); setStock("");
+        handleDeleteItem(idToDelete);
+      }
+      return;
+    }
+
     const { error } = await supabase
       .from("items")
-      .update({ name: finalName, price: parseFloat(price), stock_quantity: parseInt(stock) })
+      .update({ name: finalName, price: parseFloat(price), stock_quantity: stockQty })
       .eq("id", editingId);
 
     if (error) {
@@ -113,8 +146,14 @@ export default function AdminPage() {
     const finalName = selectedOption === "Outro" ? customName.trim() : selectedOption;
     if (!finalName || !price || !stock) return alert("Preencha todos os campos");
 
+    const stockQty = parseInt(stock);
+    if (stockQty < 0) {
+      alert("⚠️ O estoque inicial de um novo produto não pode ser menor que zero! Digite 0 ou uma quantidade positiva.");
+      return;
+    }
+
     const { error } = await supabase.from("items").insert([
-      { name: finalName, price: parseFloat(price), stock_quantity: parseInt(stock) },
+      { name: finalName, price: parseFloat(price), stock_quantity: stockQty },
     ]);
 
     if (error) {
@@ -141,19 +180,60 @@ export default function AdminPage() {
   }
 
   /**
-   * OPERAÇÃO (DELETE): Exclui um log de venda e seus itens relacionados
+   * OPERAÇÃO (DELETE): Exclui um log de venda. Se a venda for de HOJE, devolve seus itens ao estoque automaticamente.
    */
   async function handleDeleteOrder(id: string) {
-    if (confirm("🚨 ATENÇÃO: Tem certeza que deseja cancelar e apagar esta venda?")) {
-      // Deleta em cascata (primeiro os itens, depois a ordem)
+    if (confirm("🚨 ATENÇÃO: Tem certeza que deseja cancelar e apagar esta venda? Se a venda for de HOJE, os itens retornarão ao estoque automaticamente.")) {
+      // 1. Busca os detalhes da venda para verificar a data
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("created_at")
+        .eq("id", id)
+        .single();
+
+      const isToday = orderData && new Date(orderData.created_at).toDateString() === new Date().toDateString();
+
+      // Se for de hoje, devolve os itens ao estoque
+      if (isToday) {
+        const { data: orderItems } = await supabase
+          .from("order_items")
+          .select("item_id, quantity")
+          .eq("order_id", id);
+
+        if (orderItems && orderItems.length > 0) {
+          for (const item of orderItems) {
+            // Busca a quantidade atual de estoque do produto
+            const { data: currentItem } = await supabase
+              .from("items")
+              .select("stock_quantity")
+              .eq("id", item.item_id)
+              .single();
+
+            if (currentItem) {
+              // Devolve a quantidade do pedido de volta ao estoque
+              await supabase
+                .from("items")
+                .update({ stock_quantity: currentItem.stock_quantity + item.quantity })
+                .eq("id", item.item_id);
+            }
+          }
+        }
+      }
+
+      // 2. Deleta em cascata no banco de dados (primeiro itens, depois a venda)
       await supabase.from("order_items").delete().eq("order_id", id);
       const { error } = await supabase.from("orders").delete().eq("id", id);
 
       if (error) {
         alert("Erro ao excluir a venda: " + error.message);
       } else {
-        alert("Venda apagada com sucesso!");
+        if (isToday) {
+          alert("Venda cancelada com sucesso e itens devolvidos ao estoque!");
+        } else {
+          alert("Venda antiga excluída com sucesso! Os itens não retornaram ao estoque para manter a integridade histórica.");
+        }
         fetchOrders();
+        fetchItems(); // Atualiza na hora o painel de estoque do Admin!
       }
     }
   }
@@ -347,19 +427,37 @@ export default function AdminPage() {
           <div className="bg-white p-6 lg:p-8 rounded-3xl border border-slate-200 shadow-sm h-full">
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <h2 className="text-xl font-bold text-slate-800">Log de Vendas (Hoje)</h2>
-              <button 
-                onClick={exportToCSV}
-                className="bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-full font-bold text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2 border border-emerald-200"
-              >
-                <Download size={18} /> Exportar Excel
-              </button>
+              <h2 className="text-xl font-bold text-slate-800">
+                Log de Vendas ({filterPeriod === 'hoje' ? 'Hoje' : filterPeriod === '7dias' ? 'Últimos 7 dias' : filterPeriod === '15dias' ? 'Últimos 15 dias' : filterPeriod === '30dias' ? 'Últimos 30 dias' : 'Tudo'})
+              </h2>
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={filterPeriod}
+                  onChange={(e) => setFilterPeriod(e.target.value)}
+                  className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-full font-bold text-sm text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="hoje">Hoje</option>
+                  <option value="7dias">Últimos 7 dias</option>
+                  <option value="15dias">Últimos 15 dias</option>
+                  <option value="30dias">Últimos 30 dias</option>
+                  <option value="tudo">Todo o Histórico</option>
+                </select>
+                
+                <button 
+                  onClick={exportToCSV}
+                  className="bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-full font-bold text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2 border border-emerald-200"
+                >
+                  <Download size={18} /> Exportar Excel
+                </button>
+              </div>
             </div>
 
             {orders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <Receipt size={48} className="opacity-20 mb-4" />
-                <p className="font-medium">Nenhuma venda registrada hoje.</p>
+                <p className="font-medium">
+                  Nenhuma venda registrada {filterPeriod === 'hoje' ? 'hoje' : filterPeriod === '7dias' ? 'nos últimos 7 dias' : filterPeriod === '15dias' ? 'nos últimos 15 dias' : filterPeriod === '30dias' ? 'nos últimos 30 dias' : 'no histórico'}.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -368,6 +466,7 @@ export default function AdminPage() {
                     <tr className="border-b-2 border-slate-100 text-slate-500 text-sm uppercase tracking-wider">
                       <th className="pb-4 font-bold px-4">Ticket</th>
                       <th className="pb-4 font-bold px-4">Cliente</th>
+                      <th className="pb-4 font-bold px-4">Data/Hora</th>
                       <th className="pb-4 font-bold px-4">Itens</th>
                       <th className="pb-4 font-bold px-4">Pagamento</th>
                       <th className="pb-4 font-bold text-right px-4">Total</th>
@@ -379,6 +478,10 @@ export default function AdminPage() {
                       <tr key={order.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="py-4 px-4 font-black text-slate-900">#{order.order_number}</td>
                         <td className="py-4 px-4 font-medium">{order.customer_name || "-"}</td>
+                        <td className="py-4 px-4 text-xs font-semibold text-slate-500">
+                          {new Date(order.created_at).toLocaleDateString("pt-BR")} às{" "}
+                          {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </td>
                         <td className="py-4 px-4 text-sm">
                           {order.order_items.map((oi: any) => `${oi.quantity}x ${oi.items?.name}`).join(", ")}
                         </td>
