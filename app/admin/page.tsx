@@ -128,7 +128,7 @@ export default function AdminPage() {
 
     const { error } = await supabase
       .from("items")
-      .update({ name: finalName, price: parseFloat(price), stock_quantity: stockQty })
+      .update({ name: finalName, price: parseFloat(price), stock_quantity: stockQty, active: true })
       .eq("id", editingId);
 
     if (error) {
@@ -168,13 +168,39 @@ export default function AdminPage() {
    * Nota: Possui restrição de integridade referencial no banco
    */
   async function handleDeleteItem(id: string) {
-    if (confirm("Tem certeza que deseja excluir este item?")) {
-      const { error } = await supabase.from("items").delete().eq("id", id);
-      
-      if (error) {
-        alert("⚠️ Bloqueio de Segurança: Este item não pode ser excluído porque já existe uma venda registrada com ele.");
+    if (confirm("Tem certeza que deseja remover este item?")) {
+      // Verifica se o item possui alguma venda registrada no histórico
+      const { count } = await supabase
+        .from("order_items")
+        .select("id", { count: "exact", head: true })
+        .eq("item_id", id);
+
+      if (count && count > 0) {
+        // Se possui histórico, fazemos a Exclusão Lógica (Soft Delete)
+        const { error } = await supabase
+          .from("items")
+          .update({ active: false })
+          .eq("id", id);
+
+        if (error) {
+          alert("Erro ao ocultar o item: " + error.message);
+        } else {
+          alert("Este produto possui histórico de vendas e foi ocultado do cardápio com sucesso para manter a integridade dos seus relatórios!");
+          fetchItems();
+        }
       } else {
-        fetchItems();
+        // Se nunca foi vendido, fazemos a Exclusão Física (Hard Delete)
+        const { error } = await supabase
+          .from("items")
+          .delete()
+          .eq("id", id);
+
+        if (error) {
+          alert("Erro ao excluir o item: " + error.message);
+        } else {
+          alert("Produto excluído permanentemente com sucesso!");
+          fetchItems();
+        }
       }
     }
   }
@@ -399,7 +425,14 @@ export default function AdminPage() {
               {items.map((item) => (
                 <div key={item.id} className="flex justify-between items-center p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
                   <div>
-                    <p className="font-bold text-slate-800">{item.name}</p>
+                    <p className="font-bold text-slate-800 flex items-center gap-2">
+                      {item.name}
+                      {!item.active && (
+                        <span className="bg-slate-100 text-slate-500 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider">
+                          Oculto
+                        </span>
+                      )}
+                    </p>
                     <div className="flex gap-3 text-sm mt-1">
                       <span className="text-slate-500 font-medium">R$ {item.price.toFixed(2)}</span>
                       <span className={`font-bold ${item.stock_quantity > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>

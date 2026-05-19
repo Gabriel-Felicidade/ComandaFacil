@@ -24,7 +24,11 @@ export default function CaixaPage() {
    * OPERAÇÃO (READ): Busca itens disponíveis para venda
    */
   async function fetchItems() {
-    const { data } = await supabase.from("items").select("*").order("name");
+    const { data } = await supabase
+      .from("items")
+      .select("*")
+      .eq("active", true)
+      .order("name");
     if (data) setItems(data);
   }
 
