@@ -16,6 +16,7 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterPeriod, setFilterPeriod] = useState("hoje");
   const [totalArrecadado, setTotalArrecadado] = useState(0);
+  const [isHighlighting, setIsHighlighting] = useState(false);
   const { showAlert, showConfirm } = useModal();
 
   const PREDEFINED_ITEMS = [
@@ -116,6 +117,15 @@ export default function AdminPage() {
       setSelectedOption("Outro");
       setCustomName(item.name);
     }
+
+    // Subir a página suavemente para focar no formulário
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Destacar visualmente o formulário
+    setIsHighlighting(true);
+    setTimeout(() => {
+      setIsHighlighting(false);
+    }, 2000);
   }
 
   /**
@@ -362,7 +372,11 @@ export default function AdminPage() {
         <div className="lg:col-span-1 space-y-8">
           
           {/* Cadastro de Produto */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div className={`bg-white p-6 rounded-3xl border shadow-sm transition-all duration-500 ${
+            isHighlighting 
+              ? "border-blue-500 ring-4 ring-blue-100 scale-[1.02]" 
+              : "border-slate-200"
+          }`}>
             <h2 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-2">
               <Package size={20} className="text-blue-500"/> {editingId ? "Editar Produto" : "Cadastrar Produto"}
             </h2>

@@ -69,6 +69,10 @@ export default function CaixaPage() {
    * Isso evita que o estoque seja baixado sem que o pedido seja registrado.
    */
   async function handleCheckout() {
+    if (!customerName || customerName.trim() === "") {
+      await showAlert("Por favor, digite o nome do cliente antes de finalizar o pedido.", "Nome Obrigatório", "warning");
+      return;
+    }
     if (cart.length === 0) {
       await showAlert("Carrinho vazio!", "Carrinho", "warning");
       return;
@@ -80,7 +84,7 @@ export default function CaixaPage() {
     // Chamada da procedure armazenada no Supabase
     const { data, error } = await supabase.rpc("process_order", {
       p_items: cartItemsDb, 
-      p_customer_name: customerName || "Anônimo", 
+      p_customer_name: customerName.trim(), 
       p_payment_method: paymentMethod, 
       p_total_amount: cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
     });
@@ -203,9 +207,10 @@ export default function CaixaPage() {
               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
               <input
                 type="text"
+                required
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Nome do cliente"
+                placeholder="Nome do cliente (Obrigatório)"
                 className="w-full bg-white border-2 border-slate-200 pl-11 pr-4 py-3.5 rounded-2xl focus:border-blue-500 focus:ring-0 outline-none transition-all text-slate-900 placeholder:text-slate-400 font-medium"
               />
             </div>
