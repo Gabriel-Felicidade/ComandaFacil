@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { Plus, Trash2, Download, Package, DollarSign, Receipt, LayoutDashboard, Edit2, X, Check } from "lucide-react";
+import { useModal } from "../../components/ModalProvider";
 
 export default function AdminPage() {
   // ESTADOS DA APLICAÇÃO: Reatividade para interface e armazenamento de dados
@@ -15,6 +16,7 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterPeriod, setFilterPeriod] = useState("hoje");
   const [totalArrecadado, setTotalArrecadado] = useState(0);
+  const { showAlert, showConfirm } = useModal();
 
   const PREDEFINED_ITEMS = [
     "coxinha",
@@ -45,7 +47,7 @@ export default function AdminPage() {
   }, [filterPeriod]);
 
   /**
-   * OPERAÇÃO (READ): Busca todos os itens do cardápio
+   * OPERAÇÃO (READ): Busca itens do estoque no Supabase
    */
   async function fetchItems() {
     const { data } = await supabase.from("items").select("*").order("name");
@@ -53,29 +55,38 @@ export default function AdminPage() {
   }
 
   /**
-   * OPERAÇÃO (READ): Busca as vendas filtradas pelo período de tempo selecionado
-   * Inclui relacionamento (Join) com itens do pedido
+   * OPERAÇÃO (READ): Busca vendas com filtros reativos
    */
   async function fetchOrders() {
+    let query = supabase
+      .from("orders")
+      .select(`
+        id,
+        order_number,
+        customer_name,
+        payment_method,
+        total_amount,
+        created_at,
+        order_items (
+          quantity,
+          items (
+            name
+          )
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    // LÓGICA DE FILTRAGEM DE HISTÓRICO DE VENDAS
     const dateLimit = new Date();
-    
     if (filterPeriod === "hoje") {
       dateLimit.setHours(0, 0, 0, 0);
     } else if (filterPeriod === "7dias") {
       dateLimit.setDate(dateLimit.getDate() - 7);
-      dateLimit.setHours(0, 0, 0, 0);
     } else if (filterPeriod === "15dias") {
       dateLimit.setDate(dateLimit.getDate() - 15);
-      dateLimit.setHours(0, 0, 0, 0);
     } else if (filterPeriod === "30dias") {
       dateLimit.setDate(dateLimit.getDate() - 30);
-      dateLimit.setHours(0, 0, 0, 0);
     }
-
-    let query = supabase
-      .from("orders")
-      .select(`*, order_items ( quantity, items ( name ) )`)
-      .order("created_at", { ascending: false });
 
     if (filterPeriod !== "tudo") {
       query = query.gte("created_at", dateLimit.toISOString());
@@ -113,15 +124,22 @@ export default function AdminPage() {
   async function handleUpdateItem(e: React.FormEvent) {
     e.preventDefault();
     const finalName = selectedOption === "Outro" ? customName.trim() : selectedOption;
-    if (!finalName || !price || !stock || !editingId) return alert("Preencha todos os campos");
+    if (!finalName || !price || !stock || !editingId) {
+      await showAlert("Preencha todos os campos", "Aviso", "warning");
+      return;
+    }
 
     const stockQty = parseInt(stock);
     if (stockQty < 0) {
-      const confirmDelete = confirm(`⚠️ O estoque de "${finalName}" não pode ser menor que zero. Se você deseja retirar este item do cardápio, prefere excluí-lo permanentemente agora?`);
+      const confirmDelete = await showConfirm(
+        `O estoque de "${finalName}" não pode ser menor que zero. Se você deseja retirar este item do cardápio, prefere excluí-lo permanentemente agora?`,
+        "Estoque Negativo",
+        "warning"
+      );
       if (confirmDelete) {
         const idToDelete = editingId;
         setEditingId(null); setSelectedOption(""); setCustomName(""); setPrice(""); setStock("");
-        handleDeleteItem(idToDelete);
+        await handleDeleteItem(idToDelete, true);
       }
       return;
     }
@@ -132,7 +150,7 @@ export default function AdminPage() {
       .eq("id", editingId);
 
     if (error) {
-      alert("Erro ao editar: " + error.message);
+      await showAlert("Erro ao editar: " + error.message, "Erro", "error");
     } else {
       setEditingId(null); setSelectedOption(""); setCustomName(""); setPrice(""); setStock(""); fetchItems();
     }
@@ -144,11 +162,14 @@ export default function AdminPage() {
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
     const finalName = selectedOption === "Outro" ? customName.trim() : selectedOption;
-    if (!finalName || !price || !stock) return alert("Preencha todos os campos");
+    if (!finalName || !price || !stock) {
+      await showAlert("Preencha todos os campos", "Aviso", "warning");
+      return;
+    }
 
     const stockQty = parseInt(stock);
     if (stockQty < 0) {
-      alert("⚠️ O estoque inicial de um novo produto não pode ser menor que zero! Digite 0 ou uma quantidade positiva.");
+      await showAlert("O estoque inicial de um novo produto não pode ser menor que zero! Digite 0 ou uma quantidade positiva.", "Aviso", "warning");
       return;
     }
 
@@ -157,7 +178,7 @@ export default function AdminPage() {
     ]);
 
     if (error) {
-      alert("Erro ao adicionar: " + error.message);
+      await showAlert("Erro ao adicionar: " + error.message, "Erro", "error");
     } else {
       setSelectedOption(""); setCustomName(""); setPrice(""); setStock(""); fetchItems();
     }
@@ -167,8 +188,8 @@ export default function AdminPage() {
    * OPERAÇÃO (DELETE): Remove um item do estoque
    * Nota: Possui restrição de integridade referencial no banco
    */
-  async function handleDeleteItem(id: string) {
-    if (confirm("Tem certeza que deseja remover este item?")) {
+  async function handleDeleteItem(id: string, forceSkipConfirm = false) {
+    if (forceSkipConfirm || await showConfirm("Tem certeza que deseja remover este item?", "Excluir Item", "warning")) {
       // Verifica se o item possui alguma venda registrada no histórico
       const { count } = await supabase
         .from("order_items")
@@ -183,9 +204,9 @@ export default function AdminPage() {
           .eq("id", id);
 
         if (error) {
-          alert("Erro ao ocultar o item: " + error.message);
+          await showAlert("Erro ao ocultar o item: " + error.message, "Erro", "error");
         } else {
-          alert("Este produto possui histórico de vendas e foi ocultado do cardápio com sucesso para manter a integridade dos seus relatórios!");
+          await showAlert("Este produto possui histórico de vendas e foi ocultado do cardápio com sucesso para manter a integridade dos seus relatórios!", "Sucesso", "success");
           fetchItems();
         }
       } else {
@@ -196,9 +217,9 @@ export default function AdminPage() {
           .eq("id", id);
 
         if (error) {
-          alert("Erro ao excluir o item: " + error.message);
+          await showAlert("Erro ao excluir o item: " + error.message, "Erro", "error");
         } else {
-          alert("Produto excluído permanentemente com sucesso!");
+          await showAlert("Produto excluído permanentemente com sucesso!", "Sucesso", "success");
           fetchItems();
         }
       }
@@ -209,7 +230,7 @@ export default function AdminPage() {
    * OPERAÇÃO (DELETE): Exclui um log de venda. Se a venda for de HOJE, devolve seus itens ao estoque automaticamente.
    */
   async function handleDeleteOrder(id: string) {
-    if (confirm("🚨 ATENÇÃO: Tem certeza que deseja cancelar e apagar esta venda? Se a venda for de HOJE, os itens retornarão ao estoque automaticamente.")) {
+    if (await showConfirm("Tem certeza que deseja cancelar e apagar esta venda? Se a venda for de HOJE, os itens retornarão ao estoque automaticamente.", "Cancelar Venda", "warning")) {
       // 1. Busca os detalhes da venda para verificar a data
       const { data: orderData } = await supabase
         .from("orders")
@@ -251,12 +272,12 @@ export default function AdminPage() {
       const { error } = await supabase.from("orders").delete().eq("id", id);
 
       if (error) {
-        alert("Erro ao excluir a venda: " + error.message);
+        await showAlert("Erro ao excluir a venda: " + error.message, "Erro", "error");
       } else {
         if (isToday) {
-          alert("Venda cancelada com sucesso e itens devolvidos ao estoque!");
+          await showAlert("Venda cancelada com sucesso e itens devolvidos ao estoque!", "Sucesso", "success");
         } else {
-          alert("Venda antiga excluída com sucesso! Os itens não retornaram ao estoque para manter a integridade histórica.");
+          await showAlert("Venda antiga excluída com sucesso! Os itens não retornaram ao estoque para manter a integridade histórica.", "Sucesso", "success");
         }
         fetchOrders();
         fetchItems(); // Atualiza na hora o painel de estoque do Admin!
@@ -265,8 +286,11 @@ export default function AdminPage() {
   }
 
 
-  function exportToCSV() {
-    if (orders.length === 0) return alert("Não há vendas para exportar.");
+  async function exportToCSV() {
+    if (orders.length === 0) {
+      await showAlert("Não há vendas para exportar.", "Aviso", "warning");
+      return;
+    }
     
     const headers = ["Ticket", "Cliente", "Data", "Hora", "Pagamento", "Total (R$)", "Itens"];
     const rows = orders.map(order => {

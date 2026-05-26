@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { ShoppingBag, Check, Trash2, User, CreditCard, Plus } from "lucide-react";
+import { useModal } from "../../components/ModalProvider";
 
 export default function CaixaPage() {
   // ESTADOS LOCAIS: Controle do carrinho e interface
@@ -11,6 +12,7 @@ export default function CaixaPage() {
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("dinheiro");
   const [isLoading, setIsLoading] = useState(false);
+  const { showAlert } = useModal();
 
   useEffect(() => {
     // Verificação de sessão client-side
@@ -35,24 +37,23 @@ export default function CaixaPage() {
   /**
    * LÓGICA DO CARRINHO: Gerenciamento de estado complexo em memória
    */
-  function addToCart(item: any) {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === item.id);
-      if (existing) {
-        // Bloqueio de estoque no carrinho (Frontend)
-        if (existing.quantity >= item.stock_quantity) {
-          alert(`⚠️ Estoque Insuficiente! Só temos ${item.stock_quantity}x unidades de "${item.name}" em estoque.`);
-          return prev;
-        }
-        return prev.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+  async function addToCart(item: any) {
+    const existing = cart.find((i) => i.id === item.id);
+    if (existing) {
+      // Bloqueio de estoque no carrinho (Frontend)
+      if (existing.quantity >= item.stock_quantity) {
+        await showAlert(`Só temos ${item.stock_quantity}x unidades de "${item.name}" em estoque.`, "Estoque Insuficiente", "warning");
+        return;
       }
+      setCart((prev) => prev.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
+    } else {
       // Bloqueio caso o estoque seja 0
       if (item.stock_quantity <= 0) {
-        alert(`⚠️ "${item.name}" está esgotado!`);
-        return prev;
+        await showAlert(`"${item.name}" está esgotado!`, "Esgotado", "warning");
+        return;
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
-    });
+      setCart((prev) => [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }]);
+    }
   }
 
   function removeFromCart(id: string) {
@@ -64,12 +65,14 @@ export default function CaixaPage() {
 
   /**
    * FINALIZAÇÃO DE PEDIDO (RPC)
-
    * Decisão Técnica: Usamos uma função no PostgreSQL (RPC) para garantir ATOMICIDADE.
    * Isso evita que o estoque seja baixado sem que o pedido seja registrado.
    */
   async function handleCheckout() {
-    if (cart.length === 0) return alert("Carrinho vazio!");
+    if (cart.length === 0) {
+      await showAlert("Carrinho vazio!", "Carrinho", "warning");
+      return;
+    }
     setIsLoading(true);
 
     const cartItemsDb = cart.map((item) => ({ item_id: item.id, quantity: item.quantity, price: item.price }));
@@ -86,10 +89,10 @@ export default function CaixaPage() {
 
     if (error) {
       console.error("❌ ERRO NO CHECKOUT (RPC):", error);
-      alert("Erro: " + error.message);
+      await showAlert("Erro: " + error.message, "Erro no checkout", "error");
     } else {
       console.log("✅ SUCESSO NO CHECKOUT (RPC):", data);
-      alert(`✅ Sucesso! Ticket: #${data.order_number}`);
+      await showAlert(`Pedido efetuado com sucesso! Ticket: #${data.order_number}`, "Sucesso", "success");
       setCart([]); setCustomerName(""); fetchItems();
     }
   }

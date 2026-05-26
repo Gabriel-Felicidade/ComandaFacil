@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
+import { useModal } from "../../components/ModalProvider";
 
 export default function LoginPage() {
   // GESTÃO DE ESTADO: Controle dos campos de entrada (Campos iniciam vazios por segurança)
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { showAlert } = useModal();
 
   /**
    * LÓGICA DE AUTENTICAÇÃO
@@ -26,10 +28,10 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (error) {
-      alert("Erro no login: Usuário ou senha incorretos.");
+      await showAlert("Usuário ou senha incorretos.", "Erro no login", "error");
     } else {
       // Feedback visual ao usuário antes do redirecionamento
-      alert("✅ Login aprovado! Entrando no sistema...");
+      await showAlert("Login aprovado! Entrando no sistema...", "Sucesso", "success");
       
       // REDIRECIONAMENTO: Forçamos o recarregamento para que o Middleware 
       // capture os novos cookies de sessão gerados pelo signInWithPassword.
