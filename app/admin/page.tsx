@@ -546,84 +546,89 @@ export default function AdminPage() {
         </div>
 
         {/* Coluna Direita: Log de Vendas */}
-        <div className="lg:col-span-2">
-          <div className="bg-white p-6 lg:p-8 rounded-3xl border border-slate-200 shadow-sm h-full">
-            
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <h2 className="text-xl font-bold text-slate-800">
-                Log de Vendas ({filterPeriod === 'hoje' ? 'Hoje' : filterPeriod === '7dias' ? 'Últimos 7 dias' : filterPeriod === '15dias' ? 'Últimos 15 dias' : filterPeriod === '30dias' ? 'Últimos 30 dias' : 'Tudo'})
-              </h2>
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={filterPeriod}
-                  onChange={(e) => setFilterPeriod(e.target.value)}
-                  className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-full font-bold text-sm text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="hoje">Hoje</option>
-                  <option value="7dias">Últimos 7 dias</option>
-                  <option value="15dias">Últimos 15 dias</option>
-                  <option value="30dias">Últimos 30 dias</option>
-                  <option value="tudo">Todo o Histórico</option>
-                </select>
+        <div className="lg:col-span-2 relative lg:min-h-[600px]">
+          <div className="lg:absolute lg:inset-0 h-full">
+            <div className="bg-white p-6 lg:p-8 rounded-3xl border border-slate-200 shadow-sm h-full flex flex-col justify-between">
+              <div className="flex-1 flex flex-col min-h-0">
                 
-                <button 
-                  onClick={exportToCSV}
-                  className="bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-full font-bold text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2 border border-emerald-200"
-                >
-                  <Download size={18} /> Exportar Excel
-                </button>
-              </div>
-            </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                  <h2 className="text-xl font-bold text-slate-800">
+                    Log de Vendas ({filterPeriod === 'hoje' ? 'Hoje' : filterPeriod === '7dias' ? 'Últimos 7 dias' : filterPeriod === '15dias' ? 'Últimos 15 dias' : filterPeriod === '30dias' ? 'Últimos 30 dias' : 'Tudo'})
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <select
+                      value={filterPeriod}
+                      onChange={(e) => setFilterPeriod(e.target.value)}
+                      className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-full font-bold text-sm text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
+                    >
+                      <option value="hoje">Hoje</option>
+                      <option value="7dias">Últimos 7 dias</option>
+                      <option value="15dias">Últimos 15 dias</option>
+                      <option value="30dias">Últimos 30 dias</option>
+                      <option value="tudo">Todo o Histórico</option>
+                    </select>
+                    
+                    <button 
+                      onClick={exportToCSV}
+                      className="bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-full font-bold text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2 border border-emerald-200"
+                    >
+                      <Download size={18} /> Exportar Excel
+                    </button>
+                  </div>
+                </div>
 
-            {orders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                <Receipt size={48} className="opacity-20 mb-4" />
-                <p className="font-medium">
-                  Nenhuma venda registrada {filterPeriod === 'hoje' ? 'hoje' : filterPeriod === '7dias' ? 'nos últimos 7 dias' : filterPeriod === '15dias' ? 'nos últimos 15 dias' : filterPeriod === '30dias' ? 'nos últimos 30 dias' : 'no histórico'}.
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col justify-between h-full">
-                <div className="overflow-x-auto max-h-[550px] overflow-y-auto pr-2 relative border border-slate-100 rounded-2xl">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-white z-10 border-b-2 border-slate-100">
-                      <tr className="text-slate-500 text-xs font-bold uppercase tracking-wider bg-white">
-                        <th className="py-4 px-4 bg-white">Ticket</th>
-                        <th className="py-4 px-4 bg-white">Cliente</th>
-                        <th className="py-4 px-4 bg-white">Data/Hora</th>
-                        <th className="py-4 px-4 bg-white">Itens</th>
-                        <th className="py-4 px-4 bg-white">Pagamento</th>
-                        <th className="py-4 text-right px-4 bg-white">Total</th>
-                        <th className="py-4 text-center px-4 bg-white">Ação</th>
+                {orders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400 my-auto flex-1">
+                    <Receipt size={48} className="opacity-20 mb-4" />
+                    <p className="font-medium">
+                      Nenhuma venda registrada {filterPeriod === 'hoje' ? 'hoje' : filterPeriod === '7dias' ? 'nos últimos 7 dias' : filterPeriod === '15dias' ? 'nos últimos 15 dias' : filterPeriod === '30dias' ? 'nos últimos 30 dias' : 'no histórico'}.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto flex-1 min-h-[300px] max-h-[500px] lg:max-h-none overflow-y-auto pr-2 relative border border-slate-100 rounded-2xl">
+                    <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                        <th className="py-3 px-2 bg-white sticky top-0 z-10 border-b border-slate-100 text-left">Ticket</th>
+                        <th className="py-3 px-2 bg-white sticky top-0 z-10 border-b border-slate-100 text-left">Cliente</th>
+                        <th className="py-3 px-2 bg-white sticky top-0 z-10 border-b border-slate-100 text-left">Data/Hora</th>
+                        <th className="py-3 px-2 bg-white sticky top-0 z-10 border-b border-slate-100 text-left">Itens</th>
+                        <th className="py-3 px-2 bg-white sticky top-0 z-10 border-b border-slate-100 text-left">Pagamento</th>
+                        <th className="py-3 px-2 bg-white sticky top-0 z-10 border-b border-slate-100 text-right">Total</th>
+                        <th className="py-3 px-2 bg-white sticky top-0 z-10 border-b border-slate-100 text-center">Ação</th>
                       </tr>
                     </thead>
                     <tbody className="text-slate-700">
                       {displayedOrders.map((order) => (
                         <tr key={order.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="py-4 px-4 font-black text-slate-900">#{order.order_number}</td>
-                          <td className="py-4 px-4 font-medium">{order.customer_name || "-"}</td>
-                          <td className="py-4 px-4 text-xs font-semibold text-slate-500 whitespace-nowrap">
-                            {new Date(order.created_at).toLocaleDateString("pt-BR")} às{" "}
-                            {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          <td className="py-3 px-2 font-black text-slate-900">#{order.order_number}</td>
+                          <td className="py-3 px-2 font-medium max-w-[110px] truncate" title={order.customer_name || "-"}>
+                            {order.customer_name || "-"}
                           </td>
-                          <td className="py-4 px-4 text-sm min-w-[200px]">
+                          <td className="py-3 px-2 text-xs font-semibold text-slate-500">
+                            <div className="whitespace-nowrap">{new Date(order.created_at).toLocaleDateString("pt-BR")}</div>
+                            <div className="text-slate-400 text-[10px] font-medium mt-0.5 whitespace-nowrap">
+                              {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          </td>
+                          <td className="py-3 px-2 text-sm max-w-[200px] break-words">
                             {order.order_items.map((oi: any) => `${oi.quantity}x ${oi.items?.name}`).join(", ")}
                           </td>
-                          <td className="py-4 px-4">
-                            <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2.5 py-1 rounded-md uppercase">
+                          <td className="py-3 px-2">
+                            <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase whitespace-nowrap">
                               {order.payment_method}
                             </span>
                           </td>
-                          <td className="py-4 px-4 font-bold text-right text-slate-900">
+                          <td className="py-3 px-2 font-bold text-right text-slate-900 whitespace-nowrap">
                             R$ {Number(order.total_amount).toFixed(2)}
                           </td>
-                          <td className="py-4 px-4 text-center">
+                          <td className="py-3 px-2 text-center">
                             <button 
                               onClick={() => handleDeleteOrder(order.id)}
-                              className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100 mx-auto block"
+                              className="text-slate-400 hover:text-rose-500 transition-colors p-1.5 bg-white rounded-full shadow-sm border border-slate-100 mx-auto block"
                               title="Apagar Log de Venda"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={16} />
                             </button>
                           </td>
                         </tr>
@@ -631,30 +636,31 @@ export default function AdminPage() {
                     </tbody>
                   </table>
                 </div>
+              )}
+            </div>
 
-                {/* Controle de Paginação das Vendas */}
-                {totalOrderPages > 1 && (
-                  <div className="flex items-center justify-center gap-1.5 mt-6 pt-4 border-t border-slate-100 flex-wrap">
-                    {Array.from({ length: totalOrderPages }).map((_, i) => {
-                      const pageNum = i + 1;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setOrderPage(pageNum)}
-                          className={`w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center transition-all ${
-                            orderPage === pageNum
-                              ? "bg-blue-600 text-white shadow-md shadow-blue-200"
-                              : "bg-slate-50 text-slate-600 hover:bg-slate-100 active:scale-95"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+            {/* Controle de Paginação das Vendas */}
+            {orders.length > 0 && totalOrderPages > 1 && (
+              <div className="flex items-center justify-center gap-1.5 mt-6 pt-4 border-t border-slate-100 flex-wrap">
+                {Array.from({ length: totalOrderPages }).map((_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setOrderPage(pageNum)}
+                      className={`w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center transition-all ${
+                        orderPage === pageNum
+                          ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                          : "bg-slate-50 text-slate-600 hover:bg-slate-100 active:scale-95"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
               </div>
             )}
+          </div>
           </div>
         </div>
 
