@@ -19,6 +19,11 @@ export default function AdminPage() {
   const [isHighlighting, setIsHighlighting] = useState(false);
   const { showAlert, showConfirm } = useModal();
 
+  // PAGINAÇÃO E SCROLL
+  const [productPage, setProductPage] = useState(1);
+  const [orderPage, setOrderPage] = useState(1);
+  const itemsPerPage = 20;
+
   const PREDEFINED_ITEMS = [
     "coxinha",
     "kibe",
@@ -44,8 +49,31 @@ export default function AdminPage() {
 
   // Re-busca pedidos sempre que o período selecionado mudar
   useEffect(() => {
+    setOrderPage(1);
     fetchOrders();
   }, [filterPeriod]);
+
+  // Garante que a página atual de pedidos não fique fora do limite após atualizações
+  useEffect(() => {
+    const maxPages = Math.ceil(orders.length / itemsPerPage);
+    if (maxPages > 0 && orderPage > maxPages) {
+      setOrderPage(maxPages);
+    }
+  }, [orders.length, orderPage]);
+
+  // Garante que a página atual de produtos não fique fora do limite após atualizações
+  useEffect(() => {
+    const maxPages = Math.ceil(items.length / itemsPerPage);
+    if (maxPages > 0 && productPage > maxPages) {
+      setProductPage(maxPages);
+    }
+  }, [items.length, productPage]);
+
+  const totalProductPages = Math.ceil(items.length / itemsPerPage);
+  const displayedItems = items.slice((productPage - 1) * itemsPerPage, productPage * itemsPerPage);
+
+  const totalOrderPages = Math.ceil(orders.length / itemsPerPage);
+  const displayedOrders = orders.slice((orderPage - 1) * itemsPerPage, orderPage * itemsPerPage);
 
   /**
    * OPERAÇÃO (READ): Busca itens do estoque no Supabase
@@ -457,38 +485,62 @@ export default function AdminPage() {
           </div>
 
           {/* Lista de Estoque */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-800 mb-5">Estoque Atual</h2>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-              {items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
-                  <div>
-                    <p className="font-bold text-slate-800 flex items-center gap-2">
-                      {item.name}
-                      {!item.active && (
-                        <span className="bg-slate-100 text-slate-500 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider">
-                          Oculto
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800 mb-5">Estoque Atual</h2>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {displayedItems.map((item) => (
+                  <div key={item.id} className="flex justify-between items-center p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
+                    <div>
+                      <p className="font-bold text-slate-800 flex items-center gap-2">
+                        {item.name}
+                        {!item.active && (
+                          <span className="bg-slate-100 text-slate-500 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider">
+                            Oculto
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex gap-3 text-sm mt-1">
+                        <span className="text-slate-500 font-medium">R$ {item.price.toFixed(2)}</span>
+                        <span className={`font-bold ${item.stock_quantity > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          Qtd: {item.stock_quantity}
                         </span>
-                      )}
-                    </p>
-                    <div className="flex gap-3 text-sm mt-1">
-                      <span className="text-slate-500 font-medium">R$ {item.price.toFixed(2)}</span>
-                      <span className={`font-bold ${item.stock_quantity > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                        Qtd: {item.stock_quantity}
-                      </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => startEditItem(item)} className="text-slate-400 hover:text-blue-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Editar item">
+                        <Edit2 size={18} />
+                      </button>
+                      <button onClick={() => handleDeleteItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Apagar item">
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => startEditItem(item)} className="text-slate-400 hover:text-blue-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Editar item">
-                      <Edit2 size={18} />
-                    </button>
-                    <button onClick={() => handleDeleteItem(item.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Apagar item">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {/* Controle de Paginação do Estoque */}
+            {totalProductPages > 1 && (
+              <div className="flex items-center justify-center gap-1.5 mt-6 pt-4 border-t border-slate-100 flex-wrap">
+                {Array.from({ length: totalProductPages }).map((_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setProductPage(pageNum)}
+                      className={`w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center transition-all ${
+                        productPage === pageNum
+                          ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                          : "bg-slate-50 text-slate-600 hover:bg-slate-100 active:scale-95"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
         </div>
@@ -531,52 +583,76 @@ export default function AdminPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b-2 border-slate-100 text-slate-500 text-sm uppercase tracking-wider">
-                      <th className="pb-4 font-bold px-4">Ticket</th>
-                      <th className="pb-4 font-bold px-4">Cliente</th>
-                      <th className="pb-4 font-bold px-4">Data/Hora</th>
-                      <th className="pb-4 font-bold px-4">Itens</th>
-                      <th className="pb-4 font-bold px-4">Pagamento</th>
-                      <th className="pb-4 font-bold text-right px-4">Total</th>
-                      <th className="pb-4 font-bold text-center px-4">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-slate-700">
-                    {orders.map((order) => (
-                      <tr key={order.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="py-4 px-4 font-black text-slate-900">#{order.order_number}</td>
-                        <td className="py-4 px-4 font-medium">{order.customer_name || "-"}</td>
-                        <td className="py-4 px-4 text-xs font-semibold text-slate-500">
-                          {new Date(order.created_at).toLocaleDateString("pt-BR")} às{" "}
-                          {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                        </td>
-                        <td className="py-4 px-4 text-sm">
-                          {order.order_items.map((oi: any) => `${oi.quantity}x ${oi.items?.name}`).join(", ")}
-                        </td>
-                        <td className="py-4 px-4">
-                          <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2.5 py-1 rounded-md uppercase">
-                            {order.payment_method}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 font-bold text-right text-slate-900">
-                          R$ {Number(order.total_amount).toFixed(2)}
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <button 
-                            onClick={() => handleDeleteOrder(order.id)}
-                            className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100 mx-auto block"
-                            title="Apagar Log de Venda"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
+              <div className="flex flex-col justify-between h-full">
+                <div className="overflow-x-auto max-h-[550px] overflow-y-auto pr-2 relative border border-slate-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-white z-10 border-b-2 border-slate-100">
+                      <tr className="text-slate-500 text-xs font-bold uppercase tracking-wider bg-white">
+                        <th className="py-4 px-4 bg-white">Ticket</th>
+                        <th className="py-4 px-4 bg-white">Cliente</th>
+                        <th className="py-4 px-4 bg-white">Data/Hora</th>
+                        <th className="py-4 px-4 bg-white">Itens</th>
+                        <th className="py-4 px-4 bg-white">Pagamento</th>
+                        <th className="py-4 text-right px-4 bg-white">Total</th>
+                        <th className="py-4 text-center px-4 bg-white">Ação</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="text-slate-700">
+                      {displayedOrders.map((order) => (
+                        <tr key={order.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="py-4 px-4 font-black text-slate-900">#{order.order_number}</td>
+                          <td className="py-4 px-4 font-medium">{order.customer_name || "-"}</td>
+                          <td className="py-4 px-4 text-xs font-semibold text-slate-500 whitespace-nowrap">
+                            {new Date(order.created_at).toLocaleDateString("pt-BR")} às{" "}
+                            {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          </td>
+                          <td className="py-4 px-4 text-sm min-w-[200px]">
+                            {order.order_items.map((oi: any) => `${oi.quantity}x ${oi.items?.name}`).join(", ")}
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2.5 py-1 rounded-md uppercase">
+                              {order.payment_method}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 font-bold text-right text-slate-900">
+                            R$ {Number(order.total_amount).toFixed(2)}
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <button 
+                              onClick={() => handleDeleteOrder(order.id)}
+                              className="text-slate-400 hover:text-rose-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100 mx-auto block"
+                              title="Apagar Log de Venda"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Controle de Paginação das Vendas */}
+                {totalOrderPages > 1 && (
+                  <div className="flex items-center justify-center gap-1.5 mt-6 pt-4 border-t border-slate-100 flex-wrap">
+                    {Array.from({ length: totalOrderPages }).map((_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setOrderPage(pageNum)}
+                          className={`w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center transition-all ${
+                            orderPage === pageNum
+                              ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                              : "bg-slate-50 text-slate-600 hover:bg-slate-100 active:scale-95"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
