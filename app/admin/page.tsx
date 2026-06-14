@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { Plus, Trash2, Download, Package, DollarSign, Receipt, LayoutDashboard, Edit2, X, Check } from "lucide-react";
+import { Plus, Trash2, Download, Package, DollarSign, Receipt, LayoutDashboard, Edit2, X, Check, Eye, EyeOff } from "lucide-react";
 import { useModal } from "../../components/ModalProvider";
 
 export default function AdminPage() {
@@ -22,6 +22,7 @@ export default function AdminPage() {
   // PAGINAÇÃO E SCROLL
   const [productPage, setProductPage] = useState(1);
   const [orderPage, setOrderPage] = useState(1);
+  const [productFilter, setProductFilter] = useState("todos"); // "todos" | "ativos" | "ocultos"
   const itemsPerPage = 20;
 
   const PREDEFINED_ITEMS = [
@@ -61,16 +62,22 @@ export default function AdminPage() {
     }
   }, [orders.length, orderPage]);
 
+  const filteredItems = items.filter((item) => {
+    if (productFilter === "ativos") return item.active;
+    if (productFilter === "ocultos") return !item.active;
+    return true;
+  });
+
   // Garante que a página atual de produtos não fique fora do limite após atualizações
   useEffect(() => {
-    const maxPages = Math.ceil(items.length / itemsPerPage);
+    const maxPages = Math.ceil(filteredItems.length / itemsPerPage);
     if (maxPages > 0 && productPage > maxPages) {
       setProductPage(maxPages);
     }
-  }, [items.length, productPage]);
+  }, [filteredItems.length, productPage]);
 
-  const totalProductPages = Math.ceil(items.length / itemsPerPage);
-  const displayedItems = items.slice((productPage - 1) * itemsPerPage, productPage * itemsPerPage);
+  const totalProductPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const displayedItems = filteredItems.slice((productPage - 1) * itemsPerPage, productPage * itemsPerPage);
 
   const totalOrderPages = Math.ceil(orders.length / itemsPerPage);
   const displayedOrders = orders.slice((orderPage - 1) * itemsPerPage, orderPage * itemsPerPage);
@@ -261,6 +268,40 @@ export default function AdminPage() {
           fetchItems();
         }
       }
+    }
+  }
+
+  /**
+   * OPERAÇÃO (UPDATE): Reativa um item do estoque (desocultar do Caixa)
+   */
+  async function handleActivateItem(id: string) {
+    const { error } = await supabase
+      .from("items")
+      .update({ active: true })
+      .eq("id", id);
+
+    if (error) {
+      await showAlert("Erro ao ativar o item: " + error.message, "Erro", "error");
+    } else {
+      await showAlert("Produto reativado e disponível no Caixa!", "Sucesso", "success");
+      fetchItems();
+    }
+  }
+
+  /**
+   * OPERAÇÃO (UPDATE): Oculta um item do estoque (esconder do Caixa)
+   */
+  async function handleHideItem(id: string) {
+    const { error } = await supabase
+      .from("items")
+      .update({ active: false })
+      .eq("id", id);
+
+    if (error) {
+      await showAlert("Erro ao ocultar o item: " + error.message, "Erro", "error");
+    } else {
+      await showAlert("Produto ocultado com sucesso!", "Sucesso", "success");
+      fetchItems();
     }
   }
 
@@ -509,7 +550,21 @@ export default function AdminPage() {
           {/* Lista de Estoque */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-800 mb-5">Estoque Atual</h2>
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-xl font-bold text-slate-800">Estoque Atual</h2>
+                <select
+                  value={productFilter}
+                  onChange={(e) => {
+                    setProductFilter(e.target.value);
+                    setProductPage(1);
+                  }}
+                  className="bg-white border-2 border-slate-200 px-3 py-1.5 rounded-xl text-sm font-bold text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="ativos">Visíveis</option>
+                  <option value="ocultos">Ocultos</option>
+                </select>
+              </div>
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                 {displayedItems.map((item) => (
                   <div key={item.id} className="flex justify-between items-center p-4 rounded-2xl bg-slate-50 border border-slate-100 group">
@@ -530,6 +585,15 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      {item.active ? (
+                        <button onClick={() => handleHideItem(item.id)} className="text-slate-400 hover:text-amber-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Ocultar no Caixa">
+                          <EyeOff size={18} />
+                        </button>
+                      ) : (
+                        <button onClick={() => handleActivateItem(item.id)} className="text-slate-400 hover:text-emerald-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Exibir no Caixa">
+                          <Eye size={18} />
+                        </button>
+                      )}
                       <button onClick={() => startEditItem(item)} className="text-slate-400 hover:text-blue-500 transition-colors p-2 bg-white rounded-full shadow-sm border border-slate-100" title="Editar item">
                         <Edit2 size={18} />
                       </button>

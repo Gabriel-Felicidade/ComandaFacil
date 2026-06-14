@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { ShoppingBag, Check, Trash2, User, CreditCard, Plus } from "lucide-react";
 import { useModal } from "../../components/ModalProvider";
@@ -13,6 +13,17 @@ export default function CaixaPage() {
   const [paymentMethod, setPaymentMethod] = useState("dinheiro");
   const [isLoading, setIsLoading] = useState(false);
   const { showAlert } = useModal();
+  const cartContainerRef = useRef<HTMLDivElement>(null);
+
+  // Rola automaticamente para o fim da lista quando o carrinho é atualizado
+  useEffect(() => {
+    if (cartContainerRef.current) {
+      cartContainerRef.current.scrollTo({
+        top: cartContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
+  }, [cart]);
 
   useEffect(() => {
     // Verificação de sessão client-side
@@ -156,7 +167,7 @@ export default function CaixaPage() {
       </div>
 
       {/* Lado Direito: Carrinho de Compras */}
-      <aside className="w-full lg:w-[450px] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col shadow-2xl">
+      <aside className="w-full lg:w-[450px] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col shadow-2xl lg:sticky lg:top-[64px] lg:h-[calc(100vh-64px)]">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-200 text-white">
@@ -169,7 +180,7 @@ export default function CaixaPage() {
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div ref={cartContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4 max-h-[350px] lg:max-h-none">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4 py-12">
               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
