@@ -356,6 +356,12 @@ export default function AdminPage() {
     document.body.removeChild(link);
   }
 
+  // Calcula a quantidade total de itens individuais vendidos nos pedidos filtrados
+  const totalItemsSold = orders.reduce((acc, order) => {
+    const orderQty = order.order_items?.reduce((sum: number, oi: any) => sum + (oi.quantity || 0), 0) || 0;
+    return acc + orderQty;
+  }, 0);
+
   return (
     <div className="p-4 lg:p-8 min-h-[calc(100vh-64px)] bg-[#F8FAFC]">
       
@@ -377,7 +383,9 @@ export default function AdminPage() {
               <DollarSign size={28} />
             </div>
             <div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Arrecadado Hoje</p>
+              <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">
+                {filterPeriod === 'hoje' ? 'Arrecadado Hoje' : filterPeriod === '7dias' ? 'Arrecadado (7d)' : filterPeriod === '15dias' ? 'Arrecadado (15d)' : filterPeriod === '30dias' ? 'Arrecadado (30d)' : 'Total Arrecadado'}
+              </p>
               <p className="text-3xl font-black text-slate-900">R$ {totalArrecadado.toFixed(2)}</p>
             </div>
           </div>
@@ -387,8 +395,22 @@ export default function AdminPage() {
               <Receipt size={28} />
             </div>
             <div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">Vendas Hoje</p>
+              <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">
+                {filterPeriod === 'hoje' ? 'Vendas Hoje' : filterPeriod === '7dias' ? 'Vendas 7 Dias' : filterPeriod === '15dias' ? 'Vendas 15 Dias' : filterPeriod === '30dias' ? 'Vendas 30 Dias' : 'Total de Vendas'}
+              </p>
               <p className="text-3xl font-black text-slate-900">{orders.length} pedidos</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Package size={28} />
+            </div>
+            <div>
+              <p className="text-slate-500 text-sm font-bold uppercase tracking-wider">
+                {filterPeriod === 'hoje' ? 'Itens Vendidos Hoje' : filterPeriod === '7dias' ? 'Itens Vendidos (7d)' : filterPeriod === '15dias' ? 'Itens Vendidos (15d)' : filterPeriod === '30dias' ? 'Itens Vendidos (30d)' : 'Total Itens Vendidos'}
+              </p>
+              <p className="text-3xl font-black text-slate-900">{totalItemsSold} unidades</p>
             </div>
           </div>
         </div>
