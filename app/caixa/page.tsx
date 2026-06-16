@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { ShoppingBag, Check, Trash2, User, CreditCard, Plus } from "lucide-react";
+import { useModal } from "../../components/ModalProvider";
 
 export default function CaixaPage() {
   // ESTADOS LOCAIS: Controle do carrinho e interface
@@ -11,6 +12,18 @@ export default function CaixaPage() {
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("dinheiro");
   const [isLoading, setIsLoading] = useState(false);
+  const { showAlert } = useModal();
+  const cartContainerRef = useRef<HTMLDivElement>(null);
+
+  // Rola automaticamente para o fim da lista quando o carrinho é atualizado
+  useEffect(() => {
+    if (cartContainerRef.current) {
+      cartContainerRef.current.scrollTo({
+        top: cartContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
+  }, [cart]);
 
   useEffect(() => {
     // Verificação de sessão client-side
@@ -24,21 +37,34 @@ export default function CaixaPage() {
    * OPERAÇÃO (READ): Busca itens disponíveis para venda
    */
   async function fetchItems() {
-    const { data } = await supabase.from("items").select("*").order("name");
+    const { data } = await supabase
+      .from("items")
+      .select("*")
+      .eq("active", true)
+      .order("name");
     if (data) setItems(data);
   }
 
   /**
    * LÓGICA DO CARRINHO: Gerenciamento de estado complexo em memória
    */
-  function addToCart(item: any) {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === item.id);
-      if (existing) {
-        return prev.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+  async function addToCart(item: any) {
+    const existing = cart.find((i) => i.id === item.id);
+    if (existing) {
+      // Bloqueio de estoque no carrinho (Frontend)
+      if (existing.quantity >= item.stock_quantity) {
+        await showAlert(`Só temos ${item.stock_quantity}x unidades de "${item.name}" em estoque.`, "Estoque Insuficiente", "warning");
+        return;
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
-    });
+      setCart((prev) => prev.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
+    } else {
+      // Bloqueio caso o estoque seja 0
+      if (item.stock_quantity <= 0) {
+        await showAlert(`"${item.name}" está esgotado!`, "Esgotado", "warning");
+        return;
+      }
+      setCart((prev) => [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }]);
+    }
   }
 
   function removeFromCart(id: string) {
@@ -50,12 +76,18 @@ export default function CaixaPage() {
 
   /**
    * FINALIZAÇÃO DE PEDIDO (RPC)
-
    * Decisão Técnica: Usamos uma função no PostgreSQL (RPC) para garantir ATOMICIDADE.
    * Isso evita que o estoque seja baixado sem que o pedido seja registrado.
    */
   async function handleCheckout() {
-    if (cart.length === 0) return alert("Carrinho vazio!");
+    if (!customerName || customerName.trim() === "") {
+      await showAlert("Por favor, digite o nome do cliente antes de finalizar o pedido.", "Nome Obrigatório", "warning");
+      return;
+    }
+    if (cart.length === 0) {
+      await showAlert("Carrinho vazio!", "Carrinho", "warning");
+      return;
+    }
     setIsLoading(true);
 
     const cartItemsDb = cart.map((item) => ({ item_id: item.id, quantity: item.quantity, price: item.price }));
@@ -63,7 +95,7 @@ export default function CaixaPage() {
     // Chamada da procedure armazenada no Supabase
     const { data, error } = await supabase.rpc("process_order", {
       p_items: cartItemsDb, 
-      p_customer_name: customerName || "Anônimo", 
+      p_customer_name: customerName.trim(), 
       p_payment_method: paymentMethod, 
       p_total_amount: cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
     });
@@ -71,9 +103,11 @@ export default function CaixaPage() {
     setIsLoading(false);
 
     if (error) {
-      alert("Erro: " + error.message);
+      console.error("❌ ERRO NO CHECKOUT (RPC):", error);
+      await showAlert("Erro: " + error.message, "Erro no checkout", "error");
     } else {
-      alert(`✅ Sucesso! Ticket: #${data.order_number}`);
+      console.log("✅ SUCESSO NO CHECKOUT (RPC):", data);
+      await showAlert(`Pedido efetuado com sucesso! Ticket: #${data.order_number}`, "Sucesso", "success");
       setCart([]); setCustomerName(""); fetchItems();
     }
   }
@@ -133,7 +167,7 @@ export default function CaixaPage() {
       </div>
 
       {/* Lado Direito: Carrinho de Compras */}
-      <aside className="w-full lg:w-[450px] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col shadow-2xl">
+      <aside className="w-full lg:w-[450px] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col shadow-2xl lg:sticky lg:top-[64px] lg:h-[calc(100vh-64px)]">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-200 text-white">
@@ -146,7 +180,7 @@ export default function CaixaPage() {
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div ref={cartContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4 max-h-[350px] lg:max-h-none">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4 py-12">
               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
@@ -184,9 +218,10 @@ export default function CaixaPage() {
               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
               <input
                 type="text"
+                required
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Nome do cliente"
+                placeholder="Nome do cliente (Obrigatório)"
                 className="w-full bg-white border-2 border-slate-200 pl-11 pr-4 py-3.5 rounded-2xl focus:border-blue-500 focus:ring-0 outline-none transition-all text-slate-900 placeholder:text-slate-400 font-medium"
               />
             </div>
